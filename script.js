@@ -40,6 +40,8 @@ let locationLinked = false;
 let locationCheckInProgress = false;
 let todayEvents = [];
 let eventsExpanded = false;
+let clockIntervalId;
+let locationIntervalId;
 
 const memberList = document.querySelector("#member-list");
 const wakeCount = document.querySelector("#wake-count");
@@ -60,6 +62,33 @@ const nextEvent = document.querySelector("#next-event");
 const calendarDetail = document.querySelector("#calendar-detail");
 const toggleEventsButton = document.querySelector("#toggle-events");
 const todayEventsList = document.querySelector("#today-events");
+
+function formatClockTime(date) {
+  return date.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
+}
+
+function updatePrototypeClock() {
+  const now = new Date();
+  const clockElement = document.querySelector("#current-time");
+
+  if (!clockElement) {
+    return;
+  }
+
+  clockElement.textContent = formatClockTime(now);
+
+  if (clockCard) {
+    updateClockAlert(now);
+  }
+}
+
+function startPrototypeClock() {
+  updatePrototypeClock();
+
+  if (!clockIntervalId) {
+    clockIntervalId = setInterval(updatePrototypeClock, 1000);
+  }
+}
 
 function renderMembers() {
   memberList.innerHTML = "";
@@ -686,10 +715,6 @@ function isDormAlertWindow(date) {
   return minutes >= DORM_ALERT_WINDOW.startMinutes && minutes <= DORM_ALERT_WINDOW.endMinutes;
 }
 
-function formatClockTime(date) {
-  return date.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
-}
-
 function updateClockAlert(date = new Date()) {
   clockCard.classList.toggle("clock-alert", isDormAlertWindow(date) && inDorm);
 }
@@ -712,12 +737,6 @@ async function refreshDormStatusForClock() {
     locationCheckInProgress = false;
     updateClockAlert();
   }
-}
-
-function updatePrototypeClock() {
-  const now = new Date();
-  currentTime.textContent = formatClockTime(now);
-  updateClockAlert(now);
 }
 
 async function connectLocation() {
@@ -766,10 +785,9 @@ checklist.addEventListener("change", (event) => {
   updateBagCount();
 });
 
+startPrototypeClock();
 renderMembers();
 renderChecklist();
 loadWeather();
-updatePrototypeClock();
 refreshDormStatusForClock();
-setInterval(updatePrototypeClock, 1000);
-setInterval(refreshDormStatusForClock, 60_000);
+locationIntervalId = setInterval(refreshDormStatusForClock, 60_000);
