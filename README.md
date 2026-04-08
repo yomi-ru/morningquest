@@ -5,17 +5,26 @@ Morning Quest は、寮生活での「起床確認」と「朝の出発準備」
 ## Contents
 
 - `docs/spec.md`: 仕様書
-- `prototype/index.html`: ブラウザで動く静的プロトタイプ
+- `index.html`: ブラウザで動くプロトタイプ
+- `server.js`: Google Calendar 連携用のローカルプロキシ付き開発サーバー
 
 ## Prototype
 
 ローカルで確認する場合:
 
 ```sh
-open prototype/index.html
+node server.js
 ```
 
-または、`prototype/index.html` をブラウザにドラッグして開いてください。
+表示された `http://localhost:4173` をブラウザで開いてください。
+
+ファイルを直接開く場合:
+
+```sh
+open index.html
+```
+
+または、`index.html` をブラウザにドラッグして開いてください。ただし Google Calendar 連携は CORS 回避のため、`node server.js` で起動したローカルプロキシ経由の確認を推奨します。
 
 プロトタイプでは実際の QR 読み取りとプッシュ通知は接続せず、画面上の操作で挙動を疑似体験できます。天気、Google Calendar 公開 URL、位置情報はブラウザから実接続に近い形で試せます。
 
@@ -25,9 +34,9 @@ open prototype/index.html
 - 予定: Google Calendar の画面 URL、公開 iCal URL、または `webcal://` URL を入力して連携すると、本日の直近予定と予定一覧を表示します。`?cid=...` 形式の画面 URL は公開 iCal URL に自動変換して取得を試みます。
 - 位置情報: 8:50 チェック時に自動で位置情報を取得し、徳島県名西郡神山町神領字西上角175-1 付近から半径 75m 以内ならアラームを鳴らします。プロトタイプでは位置情報権限がすでに許可されている前提です。
 
-ブラウザから Google Calendar 公開 URL を直接取得する場合、URL、カレンダーの公開設定、またはブラウザの CORS 制限で失敗することがあります。本実装ではサーバー側で取得する構成、または Google Calendar API + OAuth の利用を想定します。
+ブラウザから Google Calendar 公開 URL を直接取得する場合、URL、カレンダーの公開設定、またはブラウザの CORS 制限で失敗することがあります。プロトタイプでは `node server.js` で起動するとローカルプロキシ経由で取得します。本実装ではサーバー側で取得する構成、または Google Calendar API + OAuth の利用を想定します。
 
-位置情報の取得はブラウザや実行方法によって HTTPS または localhost が必要になる場合があります。`file://` で失敗する場合は、ローカルサーバーで `prototype/index.html` を開いて確認してください。
+位置情報の取得はブラウザや実行方法によって HTTPS または localhost が必要になる場合があります。`file://` で失敗する場合は、`node server.js` でローカルサーバーを起動して確認してください。
 ## morningquest仕様書
 
 # Morning Quest 仕様書

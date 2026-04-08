@@ -254,6 +254,14 @@ function cleanIcsText(value = "") {
   return value.replace(/\\n/g, " ").replace(/\\,/g, ",").replace(/\\\\/g, "\\").trim();
 }
 
+function parseRrule(value = "") {
+  return value.split(";").reduce((rule, segment) => {
+    const [key, rawValue] = segment.split("=");
+    rule[key] = rawValue;
+    return rule;
+  }, {});
+}
+
 function parseIcsEvents(text) {
   const lines = unfoldIcsLines(text);
   const events = [];
@@ -299,14 +307,95 @@ function parseIcsEvents(text) {
     if (key === "LOCATION") {
       event.location = cleanIcsText(value);
     }
+    if (key === "RRULE") {
+      event.rrule = parseRrule(value);
+    }
   });
 
   return events;
 }
 
+function startOfDay(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
 function isToday(date) {
   const now = new Date();
   return date?.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate();
+}
+
+function getIcsWeekday(date) {
+  return ["SU", "MO", "TU", "WE", "TH", "FR", "SA"][date.getDay()];
+}
+
+function isRecurringToday(event) {
+  if (!event.rrule || !event.start) {
+    return false;
+  }
+
+  const now = new Date();
+  const todayStart = startOfDay(now);
+  const eventStartDay = startOfDay(event.start);
+  const interval = Number(event.rrule.INTERVAL || 1);
+
+  if (eventStartDay > todayStart) {
+    return false;
+  }
+
+  if (event.rrule.UNTIL) {
+    const until = parseIcsDate(event.rrule.UNTIL);
+    if (until && startOfDay(until) < todayStart) {
+      return false;
+    }
+  }
+
+  if (event.rrule.FREQ === "DAILY") {
+    const diffDays = Math.floor((todayStart - eventStartDay) / 86400000);
+    return diffDays % interval === 0;
+  }
+
+  if (event.rrule.FREQ === "WEEKLY") {
+    const diffWeeks = Math.floor((todayStart - eventStartDay) / (86400000 * 7));
+    const weekdays = event.rrule.BYDAY ? event.rrule.BYDAY.split(",") : [getIcsWeekday(event.start)];
+    return diffWeeks % interval === 0 && weekdays.includes(getIcsWeekday(now));
+  }
+
+  return false;
+}
+
+function occurrenceForToday(event) {
+  const today = new Date();
+  const start = event.allDay
+    ? startOfDay(today)
+    : new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate(),
+        event.start.getHours(),
+        event.start.getMinutes(),
+        event.start.getSeconds(),
+      );
+  const duration = event.end ? event.end - event.start : 0;
+
+  return {
+    ...event,
+    start,
+    end: event.end ? new Date(start.getTime() + duration) : undefined,
+  };
+}
+
+function expandEventsForToday(events) {
+  return events
+    .map((event) => {
+      if (isToday(event.start)) {
+        return event;
+      }
+      if (isRecurringToday(event)) {
+        return occurrenceForToday(event);
+      }
+      return undefined;
+    })
+    .filter(Boolean);
 }
 
 function formatEventTime(event) {
@@ -345,7 +434,38 @@ function renderTodayEvents() {
   });
 }
 
+async function fetchCalendarText(url) {
+  const canUseLocalProxy = window.location.protocol === "http:" || window.location.protocol === "https:";
+  const proxyUrl = `/api/calendar?url=${encodeURIComponent(url)}`;
+
+  if (canUseLocalProxy) {
+    try {
+      const response = await fetch(proxyUrl);
+      if (response.ok) {
+        return {
+          text: await response.text(),
+          via: "ローカルプロキシ",
+        };
+      }
+      throw new Error(`Proxy HTTP ${response.status}`);
+    } catch (error) {
+      console.warn("Calendar proxy fetch failed. Falling back to direct fetch.", error);
+    }
+  }
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} で取得に失敗しました。`);
+  }
+
+  return {
+    text: await response.text(),
+    via: "ブラウザ直接取得",
+  };
+}
+
 async function connectCalendar() {
+  const connectButton = document.querySelector("#connect-calendar");
   const calendarSource = normalizeCalendarUrl(calendarUrl.value);
   const { url } = calendarSource;
 
@@ -357,19 +477,21 @@ async function connectCalendar() {
 
   nextEvent.textContent = "カレンダー連携中...";
   calendarDetail.textContent = calendarSource.note;
+  connectButton.disabled = true;
 
   try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status} で取得に失敗しました。`);
+    const calendarResult = await fetchCalendarText(url);
+    const icsText = calendarResult.text;
+
+    if (!icsText.includes("BEGIN:VCALENDAR")) {
+      throw new Error("Google Calendar から iCal 形式ではない応答が返りました。URLの種類や公開設定を確認してください。");
     }
 
-    const icsText = await response.text();
-    todayEvents = parseIcsEvents(icsText).filter((event) => isToday(event.start)).sort((a, b) => a.start - b.start);
+    todayEvents = expandEventsForToday(parseIcsEvents(icsText)).sort((a, b) => a.start - b.start);
     const upcoming = todayEvents.find((event) => event.allDay || event.start >= new Date()) || todayEvents[0];
 
     nextEvent.textContent = upcoming ? `${formatEventTime(upcoming)} ${upcoming.summary}` : "本日の予定はありません";
-    calendarDetail.textContent = `連携済み: 本日の予定 ${todayEvents.length} 件`;
+    calendarDetail.textContent = `連携済み: 本日の予定 ${todayEvents.length} 件。取得方法: ${calendarResult.via}`;
     toggleEventsButton.disabled = false;
     toggleEventsButton.textContent = "本日の予定を展開";
     eventsExpanded = false;
@@ -378,6 +500,8 @@ async function connectCalendar() {
     nextEvent.textContent = "カレンダーを取得できませんでした";
     calendarDetail.textContent = `URL、カレンダーの公開設定、または CORS 制限を確認してください。静的プロトタイプで失敗する場合、本実装ではサーバー側取得または Google OAuth を推奨します。${error.message}`;
     toggleEventsButton.disabled = true;
+  } finally {
+    connectButton.disabled = false;
   }
 }
 

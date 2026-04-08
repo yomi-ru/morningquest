@@ -126,7 +126,7 @@ Morning Quest は、寮の 6 人ユニットを対象に、朝の起床確認と
 ## 8. 外部連携
 
 - Open-Meteo Forecast API: 徳島県名西郡神山町の本日の天気と最大降水確率を取得。リクエストは `https://api.open-meteo.com/v1/forecast` を利用し、神山町のプロトタイプ座標は緯度 `33.986798`、経度 `134.397042` とする。最大降水確率が 70% 以上の場合、持ち物リストへ「傘」を自動追加する。
-- Google Calendar 公開 URL: iCal 形式の公開 URL から今日の予定を取得。`cid` 付きの Google Calendar 画面 URL が入力された場合は、`cid` をカレンダー ID として公開 iCal URL に変換する。公開カレンダーでない場合、公開 URL では詳細を取得できない。ブラウザ直 fetch は CORS 制限を受ける可能性があるため、本実装ではサーバー側プロキシまたは Google Calendar API を推奨する。
+- Google Calendar 公開 URL: iCal 形式の公開 URL から今日の予定を取得。`cid` 付きの Google Calendar 画面 URL が入力された場合は、`cid` をカレンダー ID として公開 iCal URL に変換する。公開カレンダーでない場合、公開 URL では詳細を取得できない。ブラウザ直 fetch は CORS 制限を受ける可能性があるため、プロトタイプではローカルプロキシ、本実装ではサーバー側プロキシまたは Google Calendar API を推奨する。
 - Push Notification: 未起床通知と在寮通知。
 - QR Scanner: 共有スペース QR 読み取り。
 - Location / Geofence: 8:50 の在寮判定。
