@@ -48,8 +48,21 @@
           </div>
           <div class="button-row">
             <button id="alarm-7" class="primary">7:00 アラームを鳴らす</button>
-            <button id="scan-qr">QR 読み取り完了</button>
+            <button id="scan-qr">QR を読み取る</button>
             <button id="check-705">7:05 未起床チェック</button>
+          </div>
+          <div id="qr-scanner-panel" class="qr-scanner hidden" aria-live="polite">
+            <div class="qr-scanner-header">
+              <strong>起床用 QR 読み取り</strong>
+              <button id="close-qr-scanner" type="button">閉じる</button>
+            </div>
+            <div class="qr-scanner-video-wrap">
+              <video id="qr-video" class="qr-video" autoplay playsinline muted></video>
+            </div>
+            <p id="qr-status" class="qr-status">共有スペースの起床用 QR を読み取ってください。</p>
+            <div class="button-row">
+              <button id="retry-qr-scan" type="button" class="hidden">再試行</button>
+            </div>
           </div>
         </article>
 

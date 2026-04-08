@@ -173,6 +173,51 @@ h2 {
   border: 12px solid #111;
 }
 
+.qr-scanner {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.qr-scanner-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.qr-scanner-video-wrap {
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 20px;
+  background: #111;
+}
+
+.qr-video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.qr-status {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.qr-status.error {
+  color: var(--red);
+}
+
+.qr-status.success {
+  color: var(--green);
+}
+
 .button-row {
   display: flex;
   flex-wrap: wrap;

@@ -28,6 +28,8 @@ const DORM_LOCATION = {
   radiusMeters: 75,
 };
 
+const WAKEUP_QR_VALUE = "https://yomiru.net/morningquest/wakeup";
+
 const DORM_ALERT_WINDOW = {
   startMinutes: 8 * 60 + 50,
   endMinutes: 12 * 60 + 15,
@@ -42,6 +44,9 @@ let todayEvents = [];
 let eventsExpanded = false;
 let clockIntervalId;
 let locationIntervalId;
+let qrStream;
+let qrScanIntervalId;
+let qrScanInProgress = false;
 
 const memberList = document.querySelector("#member-list");
 const wakeCount = document.querySelector("#wake-count");
@@ -62,6 +67,10 @@ const nextEvent = document.querySelector("#next-event");
 const calendarDetail = document.querySelector("#calendar-detail");
 const toggleEventsButton = document.querySelector("#toggle-events");
 const todayEventsList = document.querySelector("#today-events");
+const qrScannerPanel = document.querySelector("#qr-scanner-panel");
+const qrVideo = document.querySelector("#qr-video");
+const qrStatus = document.querySelector("#qr-status");
+const retryQrScanButton = document.querySelector("#retry-qr-scan");
 
 function formatClockTime(date) {
   return date.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
@@ -607,7 +616,42 @@ function stopSound() {
   }
 }
 
-function scanQr() {
+function setQrStatus(message, tone = "default") {
+  qrStatus.textContent = message;
+  qrStatus.classList.remove("error", "success");
+
+  if (tone === "error" || tone === "success") {
+    qrStatus.classList.add(tone);
+  }
+}
+
+function stopQrScanner() {
+  if (qrScanIntervalId) {
+    clearInterval(qrScanIntervalId);
+    qrScanIntervalId = undefined;
+  }
+
+  qrScanInProgress = false;
+
+  if (qrVideo) {
+    qrVideo.pause();
+    qrVideo.srcObject = null;
+  }
+
+  if (qrStream) {
+    qrStream.getTracks().forEach((track) => track.stop());
+    qrStream = undefined;
+  }
+}
+
+function hideQrScanner() {
+  stopQrScanner();
+  qrScannerPanel.classList.add("hidden");
+  retryQrScanButton.classList.add("hidden");
+  setQrStatus("共有スペースの起床用 QR を読み取ってください。");
+}
+
+function completeWakeupByQr() {
   members[0].awake = true;
   questBadge.textContent = "起床済み";
   questBadge.className = "badge";
@@ -615,6 +659,81 @@ function scanQr() {
   notification.classList.add("hidden");
   stopSound();
   renderMembers();
+  qrScannerPanel.classList.add("hidden");
+}
+
+async function detectQrCode() {
+  if (!("BarcodeDetector" in window)) {
+    throw new Error("この端末ではQR読取を開始できません。BarcodeDetector に未対応です。");
+  }
+
+  const detector = new BarcodeDetector({ formats: ["qr_code"] });
+  const codes = await detector.detect(qrVideo);
+  return codes[0]?.rawValue?.trim();
+}
+
+async function handleQrScanResult() {
+  if (qrScanInProgress || !qrVideo.srcObject) {
+    return;
+  }
+
+  qrScanInProgress = true;
+
+  try {
+    const rawValue = await detectQrCode();
+
+    if (!rawValue) {
+      return;
+    }
+
+    if (rawValue !== WAKEUP_QR_VALUE) {
+      setQrStatus("指定された起床用QRではありません。共有スペースの起床用QRを読み取ってください。", "error");
+      retryQrScanButton.classList.remove("hidden");
+      return;
+    }
+
+    completeWakeupByQr();
+    setQrStatus("起床用QRを確認しました。起床済みに更新しました。", "success");
+    retryQrScanButton.classList.add("hidden");
+    stopQrScanner();
+  } catch (error) {
+    setQrStatus(error.message || "QR の読み取りに失敗しました。再試行してください。", "error");
+    retryQrScanButton.classList.remove("hidden");
+  } finally {
+    qrScanInProgress = false;
+  }
+}
+
+async function openQrScanner() {
+  qrScannerPanel.classList.remove("hidden");
+  retryQrScanButton.classList.add("hidden");
+  setQrStatus("共有スペースの起床用 QR を読み取ってください。");
+
+  if (!("BarcodeDetector" in window) || !navigator.mediaDevices?.getUserMedia) {
+    setQrStatus("この端末ではQR読取を開始できません。対応ブラウザを使用してください。", "error");
+    return;
+  }
+
+  stopQrScanner();
+
+  try {
+    qrStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal: "environment" },
+      },
+      audio: false,
+    });
+
+    qrVideo.srcObject = qrStream;
+    await qrVideo.play();
+    setQrStatus("共有スペースの起床用 QR をカメラに映してください。");
+
+    qrScanIntervalId = setInterval(handleQrScanResult, 500);
+  } catch (error) {
+    setQrStatus("この端末ではQR読取を開始できません。カメラ権限または HTTPS / localhost を確認してください。", "error");
+    retryQrScanButton.classList.remove("hidden");
+    stopQrScanner();
+  }
 }
 
 function checkUnawakeMembers() {
@@ -770,7 +889,7 @@ document.querySelector("#alarm-7").addEventListener("click", () => {
   playWakeAlarm();
 });
 
-document.querySelector("#scan-qr").addEventListener("click", scanQr);
+document.querySelector("#scan-qr").addEventListener("click", openQrScanner);
 document.querySelector("#check-705").addEventListener("click", checkUnawakeMembers);
 document.querySelector("#connect-location").addEventListener("click", connectLocation);
 document.querySelector("#toggle-location").addEventListener("click", toggleLocation);
@@ -778,11 +897,21 @@ document.querySelector("#alarm-850").addEventListener("click", checkDeparture);
 document.querySelector("#stop-sound").addEventListener("click", stopSound);
 document.querySelector("#load-weather").addEventListener("click", loadWeather);
 document.querySelector("#connect-calendar").addEventListener("click", connectCalendar);
+document.querySelector("#close-qr-scanner").addEventListener("click", hideQrScanner);
+retryQrScanButton.addEventListener("click", openQrScanner);
 toggleEventsButton.addEventListener("click", () => {
   eventsExpanded = !eventsExpanded;
   toggleEventsButton.textContent = eventsExpanded ? "本日の予定を閉じる" : "本日の予定を展開";
   renderTodayEvents();
 });
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    stopQrScanner();
+  }
+});
+
+window.addEventListener("pagehide", stopQrScanner);
 
 checklist.addEventListener("change", (event) => {
   const index = Number(event.target.dataset.index);
