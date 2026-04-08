@@ -57,12 +57,14 @@
               <button id="close-qr-scanner" type="button">閉じる</button>
             </div>
             <div class="qr-scanner-video-wrap">
-              <video id="qr-video" class="qr-video" autoplay playsinline muted></video>
+              <div id="qr-reader" class="qr-reader"></div>
             </div>
             <p id="qr-status" class="qr-status">共有スペースの起床用 QR を読み取ってください。</p>
             <div class="button-row">
+              <button id="scan-qr-image" type="button">写真から読み取る</button>
               <button id="retry-qr-scan" type="button" class="hidden">再試行</button>
             </div>
+            <input id="qr-image-input" type="file" accept="image/*" capture="environment" class="hidden">
           </div>
         </article>
 
@@ -138,6 +140,7 @@
       </section>
     </main>
 
-    <script src="./script.js?v=clock-20260408"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="./script.js?v=clock-20260408-qr2"></script>
   </body>
 </html>
