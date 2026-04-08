@@ -28,10 +28,16 @@ const DORM_LOCATION = {
   radiusMeters: 75,
 };
 
+const DORM_ALERT_WINDOW = {
+  startMinutes: 8 * 60 + 50,
+  endMinutes: 12 * 60 + 15,
+};
+
 let audioContext;
 let alarmInterval;
 let inDorm = false;
 let locationLinked = false;
+let locationCheckInProgress = false;
 let todayEvents = [];
 let eventsExpanded = false;
 
@@ -45,6 +51,7 @@ const bagCount = document.querySelector("#bag-count");
 const departureMessage = document.querySelector("#departure-message");
 const locationDetail = document.querySelector("#location-detail");
 const locationButton = document.querySelector("#toggle-location");
+const clockCard = document.querySelector(".clock-card");
 const currentTime = document.querySelector("#current-time");
 const weatherSummary = document.querySelector("#weather-summary");
 const weatherDetail = document.querySelector("#weather-detail");
@@ -578,7 +585,6 @@ function scanQr() {
 
 function checkUnawakeMembers() {
   const sleepingMembers = members.filter((member) => !member.awake);
-  currentTime.textContent = "07:05";
 
   if (sleepingMembers.length === 0) {
     notification.textContent = "全員の起床確認が完了しました。ユニットクエスト達成です。";
@@ -653,7 +659,6 @@ function applyDormLocation(current) {
 }
 
 async function checkDeparture() {
-  currentTime.textContent = "08:50";
   departureMessage.textContent = "8:50 になったため、位置情報を自動取得しています...";
   locationDetail.textContent = "位置情報権限は許可済み前提で判定します。";
 
@@ -676,6 +681,45 @@ async function checkDeparture() {
   }
 }
 
+function isDormAlertWindow(date) {
+  const minutes = date.getHours() * 60 + date.getMinutes();
+  return minutes >= DORM_ALERT_WINDOW.startMinutes && minutes <= DORM_ALERT_WINDOW.endMinutes;
+}
+
+function formatClockTime(date) {
+  return date.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
+}
+
+function updateClockAlert(date = new Date()) {
+  clockCard.classList.toggle("clock-alert", isDormAlertWindow(date) && inDorm);
+}
+
+async function refreshDormStatusForClock() {
+  if (locationCheckInProgress || !isDormAlertWindow(new Date())) {
+    updateClockAlert();
+    return;
+  }
+
+  locationCheckInProgress = true;
+
+  try {
+    applyDormLocation(await getCurrentLocation());
+  } catch (error) {
+    locationLinked = false;
+    clockCard.classList.remove("clock-alert");
+    locationDetail.textContent = `時計の寮付近判定で位置情報を取得できませんでした。${error.message}`;
+  } finally {
+    locationCheckInProgress = false;
+    updateClockAlert();
+  }
+}
+
+function updatePrototypeClock() {
+  const now = new Date();
+  currentTime.textContent = formatClockTime(now);
+  updateClockAlert(now);
+}
+
 async function connectLocation() {
   if (!navigator.geolocation) {
     departureMessage.textContent = "このブラウザでは位置情報を利用できません。";
@@ -696,7 +740,6 @@ async function connectLocation() {
 }
 
 document.querySelector("#alarm-7").addEventListener("click", () => {
-  currentTime.textContent = "07:00";
   questBadge.textContent = "アラーム中";
   questBadge.className = "badge badge-danger";
   questMessage.textContent = "段階的に明るいチャイムを鳴らしています。共有スペースに移動して QR を読み取ってください。";
@@ -726,3 +769,7 @@ checklist.addEventListener("change", (event) => {
 renderMembers();
 renderChecklist();
 loadWeather();
+updatePrototypeClock();
+refreshDormStatusForClock();
+setInterval(updatePrototypeClock, 1000);
+setInterval(refreshDormStatusForClock, 60_000);
