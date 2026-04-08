@@ -1,10 +1,9 @@
 const members = [
   { name: "あなた", awake: false },
-  { name: "Aoi", awake: true },
-  { name: "Ren", awake: true },
-  { name: "Mina", awake: false },
-  { name: "Sora", awake: true },
-  { name: "Yui", awake: false },
+  { name: "後上影吾", awake: true },
+  { name: "中本怜祐", awake: true },
+  { name: "目崎奏介", awake: false },
+  { name: "龍田元希", awake: false },
 ];
 
 const checklistItems = [
@@ -171,7 +170,7 @@ async function loadWeather() {
 
     const shouldCarryUmbrella = precipitationProbability >= PRECIPITATION_UMBRELLA_THRESHOLD;
     weatherSummary.textContent = `${KAMIYAMA_COORDINATES.label}: ${weatherCodeLabel(weatherCode)}`;
-    weatherDetail.textContent = `本日の最大降水確率は ${precipitationProbability}% です。${shouldCarryUmbrella ? "70%以上のため、持ち物に傘を追加しました。" : "70%未満のため、傘の自動追加は不要です。"}`;
+    weatherDetail.textContent = `本日の最大降水確率は ${precipitationProbability}% です。${shouldCarryUmbrella ? "70%以上のため、持ち物に傘を追加しました。" : "70%未満のため、傘は不要です。"}`;
     syncUmbrellaChecklist(shouldCarryUmbrella);
   } catch (error) {
     weatherSummary.textContent = "天気情報を取得できませんでした";
