@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Morning Quest Prototype</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="hero">
+        <div>
+          <h1>Morning Quest</h1>
+          <p class="hero-text">7:00 の起床、共有スペース QR、5 分後の未起床通知、8:50 の出発アラームを疑似体験できます。</p>
+        </div>
+        <div class="clock-card">
+          <span id="current-time">07:00</span>
+          <small>Prototype Clock</small>
+        </div>
+      </section>
+
+      <section class="dashboard">
+        <article class="card quest-card">
+          <div class="card-heading">
+            <div>
+              <p class="eyebrow">Quest</p>
+              <h2>共有スペース QR で起床確認</h2>
+            </div>
+            <span id="quest-badge" class="badge badge-warning">未確認</span>
+          </div>
+          <p id="quest-message">7:00 のアラームが鳴ったら、寮のユニット共有スペースに移動して QR を読み取ります。</p>
+          <div class="qr-box" aria-label="QR code mock">
+            <div class="qr-grid"></div>
+            <span>UNIT-A / TODAY</span>
+          </div>
+          <div class="button-row">
+            <button id="alarm-7" class="primary">7:00 アラームを鳴らす</button>
+            <button id="scan-qr">QR 読み取り完了</button>
+            <button id="check-705">7:05 未起床チェック</button>
+          </div>
+        </article>
+
+        <article class="card">
+          <p class="eyebrow">Home</p>
+          <h2>今日の朝情報</h2>
+          <div class="info-grid">
+            <div>
+              <span class="info-label">天気</span>
+              <strong id="weather-summary">神山町の天気を自動取得中</strong>
+              <small id="weather-detail">ページ表示時に Open-Meteo へ接続します。</small>
+              <button id="load-weather">天気を再取得</button>
+            </div>
+            <div>
+              <span class="info-label">次の予定</span>
+              <strong id="next-event">Google Calendar 未連携</strong>
+              <small id="calendar-detail">公開 iCal URL から今日の予定を取得します。</small>
+              <label class="field-label" for="calendar-url">Google Calendar 公開 URL</label>
+              <input id="calendar-url" type="url" placeholder="https://calendar.google.com/calendar/ical/.../public/basic.ics">
+              <div class="button-row">
+                <button id="connect-calendar">連携</button>
+                <button id="toggle-events" disabled>本日の予定を展開</button>
+              </div>
+              <ul id="today-events" class="event-list hidden"></ul>
+            </div>
+            <div>
+              <span class="info-label">出発目安</span>
+              <strong>8:40</strong>
+              <small>8:50 に在寮ならアラーム</small>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="dashboard">
+        <article class="card">
+          <div class="card-heading">
+            <div>
+              <p class="eyebrow">Unit Status</p>
+              <h2>6 人ユニット</h2>
+            </div>
+            <span id="wake-count" class="badge">0 / 6</span>
+          </div>
+          <ul id="member-list" class="member-list"></ul>
+          <div id="notification" class="notification hidden" role="status"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-heading">
+            <div>
+              <p class="eyebrow">Checklist</p>
+              <h2>持ち物リスト</h2>
+            </div>
+            <span id="bag-count" class="badge">0 / 5</span>
+          </div>
+          <ul id="checklist" class="checklist"></ul>
+        </article>
+      </section>
+
+      <section class="card departure-card">
+        <div>
+          <p class="eyebrow">8:50 Departure Alarm</p>
+          <h2>神山町神領字西上角175-1 付近なら外出アラーム</h2>
+          <p id="departure-message">現在の状態: 8:50 チェック時に自動判定</p>
+          <small id="location-detail">位置情報権限は許可済み前提です。基準地点から半径 75m 以内を寮付近として判定します。</small>
+        </div>
+        <div class="button-row">
+          <button id="connect-location">現在地を確認</button>
+          <button id="toggle-location">外出済みにする</button>
+          <button id="alarm-850" class="primary">8:50 チェック</button>
+          <button id="stop-sound">音を止める</button>
+        </div>
+      </section>
+    </main>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
