@@ -17,6 +17,19 @@
           <span id="current-time">--:--</span>
           <small>Prototype Clock</small>
         </div>
+        <script>
+          (() => {
+            const clock = document.querySelector("#current-time");
+            const tick = () => {
+              if (clock) {
+                clock.textContent = new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
+              }
+            };
+
+            tick();
+            window.morningQuestClockFallback = window.setInterval(tick, 1000);
+          })();
+        </script>
       </section>
 
       <section class="dashboard">
@@ -112,6 +125,6 @@
       </section>
     </main>
 
-    <script src="./script.js"></script>
+    <script src="./script.js?v=clock-20260408"></script>
   </body>
 </html>

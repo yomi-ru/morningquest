@@ -83,6 +83,11 @@ function updatePrototypeClock() {
 }
 
 function startPrototypeClock() {
+  if (window.morningQuestClockFallback) {
+    clearInterval(window.morningQuestClockFallback);
+    window.morningQuestClockFallback = undefined;
+  }
+
   updatePrototypeClock();
 
   if (!clockIntervalId) {
