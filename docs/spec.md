@@ -52,7 +52,7 @@ Morning Quest は、寮の 6 人ユニットを対象に、朝の起床確認と
 
 今日の天気は Web ページへのアクセス時に Open-Meteo Forecast API へ自動接続し、徳島県名西郡神山町の緯度経度で取得する。プロトタイプでは `daily=weather_code,precipitation_probability_max` と `timezone=Asia/Tokyo` を指定し、本日の天気コードと最大降水確率を表示する。最大降水確率が 70% 以上の場合は、持ち物リストに「傘」を自動追加する。
 
-今日の予定は Google Calendar の公開 URL から取得する。プロトタイプでは iCal 形式の公開 URL または `webcal://` URL を入力して連携し、直近の予定をホームに表示する。連携後は「本日の予定を展開」ボタンで今日の予定一覧を開閉する。本実装では公開 URL だけでなく、プライベート予定を扱う場合に Google OAuth と Calendar API の導入を検討する。
+今日の予定は Google Calendar の公開 URL から取得する。プロトタイプでは iCal 形式の公開 URL、`webcal://` URL、または `https://calendar.google.com/calendar/u/0?cid=...` 形式の画面 URL を入力して連携し、直近の予定をホームに表示する。`cid` 形式の画面 URL は公開 iCal URL に変換して取得を試みる。連携後は「本日の予定を展開」ボタンで今日の予定一覧を開閉する。本実装では公開 URL だけでなく、プライベート予定を扱う場合に Google OAuth と Calendar API の導入を検討する。
 
 ### 4.5 8:50 在寮アラーム
 
@@ -126,7 +126,7 @@ Morning Quest は、寮の 6 人ユニットを対象に、朝の起床確認と
 ## 8. 外部連携
 
 - Open-Meteo Forecast API: 徳島県名西郡神山町の本日の天気と最大降水確率を取得。リクエストは `https://api.open-meteo.com/v1/forecast` を利用し、神山町のプロトタイプ座標は緯度 `33.986798`、経度 `134.397042` とする。最大降水確率が 70% 以上の場合、持ち物リストへ「傘」を自動追加する。
-- Google Calendar 公開 URL: iCal 形式の公開 URL から今日の予定を取得。公開カレンダーでない場合、公開 URL では詳細を取得できない。ブラウザ直 fetch は CORS 制限を受ける可能性があるため、本実装ではサーバー側プロキシまたは Google Calendar API を推奨する。
+- Google Calendar 公開 URL: iCal 形式の公開 URL から今日の予定を取得。`cid` 付きの Google Calendar 画面 URL が入力された場合は、`cid` をカレンダー ID として公開 iCal URL に変換する。公開カレンダーでない場合、公開 URL では詳細を取得できない。ブラウザ直 fetch は CORS 制限を受ける可能性があるため、本実装ではサーバー側プロキシまたは Google Calendar API を推奨する。
 - Push Notification: 未起床通知と在寮通知。
 - QR Scanner: 共有スペース QR 読み取り。
 - Location / Geofence: 8:50 の在寮判定。

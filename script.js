@@ -179,8 +179,50 @@ async function loadWeather() {
   }
 }
 
+function decodeCalendarId(value) {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const decoded = atob(normalized);
+
+  try {
+    return decodeURIComponent(
+      Array.from(decoded, (character) => `%${character.charCodeAt(0).toString(16).padStart(2, "0")}`).join(""),
+    );
+  } catch {
+    return decoded;
+  }
+}
+
 function normalizeCalendarUrl(value) {
-  return value.trim().replace(/^webcal:\/\//i, "https://");
+  const rawUrl = value.trim();
+
+  if (!rawUrl) {
+    return { url: "", note: "" };
+  }
+
+  const normalizedUrl = rawUrl.replace(/^webcal:\/\//i, "https://");
+
+  try {
+    const parsedUrl = new URL(normalizedUrl);
+    const calendarId = parsedUrl.searchParams.get("cid");
+
+    if (parsedUrl.hostname === "calendar.google.com" && calendarId) {
+      const decodedCalendarId = decodeCalendarId(calendarId);
+      return {
+        url: `https://calendar.google.com/calendar/ical/${encodeURIComponent(decodedCalendarId)}/public/basic.ics`,
+        note: "Google Calendar の画面 URL から公開 iCal URL に変換して取得しています。",
+      };
+    }
+  } catch {
+    return {
+      url: normalizedUrl,
+      note: "URL として解釈できなかったため、入力値をそのまま取得します。",
+    };
+  }
+
+  return {
+    url: normalizedUrl,
+    note: "公開 iCal URL から予定を取得しています。",
+  };
 }
 
 function unfoldIcsLines(text) {
@@ -305,16 +347,17 @@ function renderTodayEvents() {
 }
 
 async function connectCalendar() {
-  const url = normalizeCalendarUrl(calendarUrl.value);
+  const calendarSource = normalizeCalendarUrl(calendarUrl.value);
+  const { url } = calendarSource;
 
   if (!url) {
     nextEvent.textContent = "公開 URL を入力してください";
-    calendarDetail.textContent = "Google Calendar の iCal 形式 URL を貼り付けてください。";
+    calendarDetail.textContent = "Google Calendar の画面 URL、公開 iCal URL、または webcal URL を貼り付けてください。";
     return;
   }
 
   nextEvent.textContent = "カレンダー連携中...";
-  calendarDetail.textContent = "公開 iCal URL から予定を取得しています。";
+  calendarDetail.textContent = calendarSource.note;
 
   try {
     const response = await fetch(url);
@@ -334,7 +377,7 @@ async function connectCalendar() {
     renderTodayEvents();
   } catch (error) {
     nextEvent.textContent = "カレンダーを取得できませんでした";
-    calendarDetail.textContent = `公開 URL または CORS 制限を確認してください。本実装ではサーバー側取得を推奨します。${error.message}`;
+    calendarDetail.textContent = `URL、カレンダーの公開設定、または CORS 制限を確認してください。静的プロトタイプで失敗する場合、本実装ではサーバー側取得または Google OAuth を推奨します。${error.message}`;
     toggleEventsButton.disabled = true;
   }
 }
